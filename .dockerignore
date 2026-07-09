@@ -1,0 +1,25 @@
+.git
+.github
+.githooks
+node_modules
+vendor
+tests
+docs
+# locally-generated dev-time artisan caches — a stale one (referencing
+# dev-only packages like laravel/pail) copied into the image breaks every
+# artisan command since it's loaded before package:discover can regenerate
+# it; the entrypoint always regenerates these fresh at container start.
+bootstrap/cache/*.php
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+.env
+.env.*
+!.env.example
+*.md
+.editorconfig
+.gitattributes
+.gitignore
+docker-compose.yml
