@@ -12,5 +12,10 @@ return [
         'APP_URL',
         'LOG_CHANNEL',
         'LOG_LEVEL',
+        'DB_CONNECTION',
+        'DB_HOST',
+        'DB_PORT',
+        'DB_DATABASE',
+        'DB_USERNAME',
     ],
 ];

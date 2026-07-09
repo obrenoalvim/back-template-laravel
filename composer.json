@@ -48,6 +48,10 @@
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
         ],
+        "db:migrate": "@php artisan migrate",
+        "db:generate": "@php artisan make:migration",
+        "docker:up": "docker compose up -d",
+        "docker:down": "docker compose down",
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
