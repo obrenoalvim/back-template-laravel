@@ -17,5 +17,8 @@ return [
         'DB_PORT',
         'DB_DATABASE',
         'DB_USERNAME',
+        'MAIL_MAILER',
+        'MAIL_FROM_ADDRESS',
+        'FRONTEND_URL',
     ],
 ];
