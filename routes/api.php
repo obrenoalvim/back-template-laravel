@@ -2,9 +2,10 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\NotesController;
 use Illuminate\Support\Facades\Route;
 
-// Notes and health routes are added in later tasks.
+// Health routes are added in a later task.
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
@@ -25,4 +26,12 @@ Route::prefix('account')->middleware('auth:sanctum')->group(function () {
     Route::get('/', [AccountController::class, 'show']);
     Route::put('/password', [AccountController::class, 'changePassword']);
     Route::delete('/', [AccountController::class, 'destroy']);
+});
+
+Route::prefix('notes')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [NotesController::class, 'index']);
+    Route::post('/', [NotesController::class, 'store']);
+    Route::get('/{note}', [NotesController::class, 'show']);
+    Route::put('/{note}', [NotesController::class, 'update']);
+    Route::delete('/{note}', [NotesController::class, 'destroy']);
 });

@@ -21,13 +21,25 @@ class ApiExceptionRenderer
 {
     public function render(Throwable $e, Request $request): JsonResponse
     {
+        // Laravel's own Handler::prepareException() runs before this callback
+        // and rewraps ModelNotFoundException/AuthorizationException into a
+        // generic Http(Access)DeniedException with the original as $previous
+        // — so `instanceof ModelNotFoundException` here is never true. Check
+        // the previous exception too, or these branches are silently dead
+        // and the raw Eloquent message (e.g. model class + id) leaks instead.
+        $previous = $e->getPrevious();
+
         [$status, $code, $message, $details] = match (true) {
             $e instanceof ValidationException => [
                 422, 'validation_error', 'The given data was invalid.', $e->errors(),
             ],
             $e instanceof AuthenticationException => [401, 'unauthenticated', 'Unauthenticated.', null],
-            $e instanceof AuthorizationException => [403, 'forbidden', 'This action is unauthorized.', null],
-            $e instanceof ModelNotFoundException => [404, 'not_found', 'Resource not found.', null],
+            $e instanceof AuthorizationException || $previous instanceof AuthorizationException => [
+                403, 'forbidden', 'This action is unauthorized.', null,
+            ],
+            $e instanceof ModelNotFoundException || $previous instanceof ModelNotFoundException => [
+                404, 'not_found', 'Resource not found.', null,
+            ],
             $e instanceof HttpExceptionInterface => [
                 $e->getStatusCode(), $this->codeForStatus($e->getStatusCode()), $this->safeMessage($e), null,
             ],
