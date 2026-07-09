@@ -15,4 +15,7 @@ Route::prefix('auth')->group(function () {
         ->name('verification.verify');
     Route::post('/email/resend', [AuthController::class, 'resendVerification'])
         ->middleware(['auth:sanctum', 'throttle:6,1']);
+
+    Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:6,1');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:6,1');
 });
