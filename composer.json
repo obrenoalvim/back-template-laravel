@@ -40,18 +40,22 @@
             "composer install",
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
-            "@php artisan migrate --force",
-            "npm install --ignore-scripts",
-            "npm run build"
+            "docker compose up -d db",
+            "@php artisan migrate --force"
         ],
-        "dev": [
-            "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+        "dev": "@php artisan serve",
+        "build": "composer install --no-dev --optimize-autoloader",
+        "start": [
+            "@php artisan config:cache",
+            "@php artisan route:cache",
+            "@php artisan serve --host=0.0.0.0"
         ],
         "test": [
             "@php artisan config:clear --ansi @no_additional_args",
             "@php artisan test"
         ],
+        "test:watch": "@php -r \"while (true) { system('php artisan test --testsuite=Unit'); sleep(2); }\"",
+        "test:e2e": "@php artisan test --testsuite=Feature",
         "db:migrate": "@php artisan migrate",
         "db:generate": "@php artisan make:migration",
         "docker:up": "docker compose up -d",
@@ -74,9 +78,7 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
         ],
         "post-create-project-cmd": [
-            "@php artisan key:generate --ansi",
-            "@php -r \"file_exists('database/database.sqlite') || touch('database/database.sqlite');\"",
-            "@php artisan migrate --graceful --ansi"
+            "@php artisan key:generate --ansi"
         ],
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
