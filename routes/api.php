@@ -2,10 +2,11 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\HealthController;
 use App\Http\Controllers\NotesController;
 use Illuminate\Support\Facades\Route;
 
-// Health routes are added in a later task.
+Route::get('/health', [HealthController::class, 'index']);
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
