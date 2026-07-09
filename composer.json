@@ -13,6 +13,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
+        "larastan/larastan": "^3.10",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
@@ -55,12 +56,19 @@
         "db:generate": "@php artisan make:migration",
         "docker:up": "docker compose up -d",
         "docker:down": "docker compose down",
+        "lint": "@php vendor/bin/phpstan analyse --memory-limit=512M",
+        "format": "@php vendor/bin/pint",
+        "format:check": "@php vendor/bin/pint --test",
+        "post-install-cmd": [
+            "@php -r \"is_dir('.git') && @exec('git config core.hooksPath .githooks');\""
+        ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
             "@php artisan package:discover --ansi"
         ],
         "post-update-cmd": [
-            "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
+            "@php artisan vendor:publish --tag=laravel-assets --ansi --force",
+            "@php -r \"is_dir('.git') && @exec('git config core.hooksPath .githooks');\""
         ],
         "post-root-package-install": [
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""

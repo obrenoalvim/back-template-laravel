@@ -20,18 +20,23 @@ class User extends Authenticatable implements MustVerifyEmail
     use HasApiTokens, HasFactory, Notifiable;
 
     /**
-     * Get the attributes that should be cast.
+     * The installed Larastan version's Eloquent extension only reads the
+     * classic $casts property for custom casts — the method-based casts()
+     * API (Laravel 11+) is only understood for created_at/updated_at, so
+     * email_verified_at was silently inferred as `string`, not `Carbon`.
+     * Confirmed via PHPStan\dumpType(); classic property form is what
+     * actually gets statically analyzed correctly.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
 
+    /**
+     * @return HasMany<Note, $this>
+     */
     public function notes(): HasMany
     {
         return $this->hasMany(Note::class);

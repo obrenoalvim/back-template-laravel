@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Exceptions\ApiExceptionRenderer;
+use App\Models\Note;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -35,8 +37,8 @@ it('never leaks the internal message of an unexpected 500 when debug is off', fu
 });
 
 it('generalizes a wrapped ModelNotFoundException instead of leaking the Eloquent message', function () {
-    $modelNotFound = new Illuminate\Database\Eloquent\ModelNotFoundException;
-    $modelNotFound->setModel(App\Models\Note::class, [99999]);
+    $modelNotFound = new ModelNotFoundException;
+    $modelNotFound->setModel(Note::class, [99999]);
     $wrapped = new NotFoundHttpException($modelNotFound->getMessage(), $modelNotFound);
 
     $response = (new ApiExceptionRenderer)->render($wrapped, Request::create('/api/x'));

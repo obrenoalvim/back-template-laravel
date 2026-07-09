@@ -1,0 +1,13 @@
+#!/bin/sh
+# Installed via `git config core.hooksPath .githooks` (composer post-install/
+# post-update-cmd does this automatically). Auto-formats only files with
+# uncommitted changes, then re-stages them; blocks the commit on real
+# static-analysis errors (those can't be auto-fixed).
+set -e
+
+echo "pre-commit: pint (auto-format changed files)..."
+vendor/bin/pint --dirty
+git diff --name-only --diff-filter=ACMR -- '*.php' | xargs -r git add
+
+echo "pre-commit: phpstan..."
+vendor/bin/phpstan analyse --memory-limit=512M

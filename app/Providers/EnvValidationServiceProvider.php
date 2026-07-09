@@ -13,10 +13,10 @@ class EnvValidationServiceProvider extends ServiceProvider
     {
         $required = config('env.required', []);
 
-        $missing = array_filter(
+        $missing = array_keys(array_filter(
             $required,
-            fn (string $key) => env($key) === null || env($key) === '',
-        );
+            fn (string $configPath) => config($configPath) === null || config($configPath) === '',
+        ));
 
         if ($missing !== []) {
             throw new RuntimeException(
