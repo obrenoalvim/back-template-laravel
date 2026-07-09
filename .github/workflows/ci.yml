@@ -18,13 +18,17 @@ jobs:
           extensions: pdo_pgsql, pgsql, opcache
           coverage: none
 
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
-
       - name: Prepare env
+        # No `artisan key:generate` here — vendor/ doesn't exist yet, and
+        # composer install's own post-autoload-dump hook (package:discover)
+        # boots the app before this job gets a chance to run artisan for
+        # anything, so APP_KEY must already be a real value in .env going in.
         run: |
           cp .env.example .env
-          php artisan key:generate --ansi
+          php -r "file_put_contents('.env', str_replace('APP_KEY=', 'APP_KEY=base64:'.base64_encode(random_bytes(32)), file_get_contents('.env')));"
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
 
       - name: Format check (Pint)
         run: composer format:check
@@ -61,13 +65,17 @@ jobs:
           extensions: pdo_pgsql, pgsql, opcache
           coverage: none
 
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
-
       - name: Prepare env
+        # No `artisan key:generate` here — vendor/ doesn't exist yet, and
+        # composer install's own post-autoload-dump hook (package:discover)
+        # boots the app before this job gets a chance to run artisan for
+        # anything, so APP_KEY must already be a real value in .env going in.
         run: |
           cp .env.example .env
-          php artisan key:generate --ansi
+          php -r "file_put_contents('.env', str_replace('APP_KEY=', 'APP_KEY=base64:'.base64_encode(random_bytes(32)), file_get_contents('.env')));"
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
 
       - name: Feature/integration tests (real Postgres, no mocking)
         run: vendor/bin/pest --testsuite=Feature
