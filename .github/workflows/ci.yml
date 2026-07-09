@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: build + lint + format-check + unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql, pgsql, opcache
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare env
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      - name: Format check (Pint)
+        run: composer format:check
+
+      - name: Lint (Larastan)
+        run: composer lint
+
+      - name: Unit tests (no DB)
+        run: vendor/bin/pest --testsuite=Unit
+
+  e2e:
+    name: integration/e2e (real Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_test
+        ports:
+          - "5457:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql, pgsql, opcache
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Prepare env
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      - name: Feature/integration tests (real Postgres, no mocking)
+        run: vendor/bin/pest --testsuite=Feature
+
+  docker:
+    name: docker build + smoke test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t back-template-laravel:ci .
+
+      - name: Run container against real Postgres
+        run: |
+          docker run -d --name app --network host \
+            -e APP_KEY="base64:$(openssl rand -base64 32)" \
+            -e APP_ENV=production \
+            -e APP_URL=http://127.0.0.1:8000 \
+            -e LOG_CHANNEL=json \
+            -e LOG_LEVEL=info \
+            -e DB_CONNECTION=pgsql \
+            -e DB_HOST=127.0.0.1 \
+            -e DB_PORT=5432 \
+            -e DB_DATABASE=app \
+            -e DB_USERNAME=postgres \
+            -e DB_PASSWORD=postgres \
+            -e MAIL_MAILER=log \
+            -e MAIL_FROM_ADDRESS=hello@example.com \
+            -e FRONTEND_URL=http://localhost:3000 \
+            back-template-laravel:ci
+
+      - name: Wait for container to report healthy
+        run: |
+          for i in $(seq 1 20); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' app || echo "starting")
+            echo "check $i: $status"
+            [ "$status" = "healthy" ] && exit 0
+            [ "$status" = "unhealthy" ] && docker logs app && exit 1
+            sleep 3
+          done
+          echo "timed out waiting for healthy"
+          docker logs app
+          exit 1
+
+      - name: Hit the health endpoint
+        run: curl -f http://127.0.0.1:8000/api/health
