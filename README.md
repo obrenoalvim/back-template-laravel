@@ -1,3 +1,5 @@
+English | [Português](README.pt.md)
+
 # back-template-laravel
 
 Production-ready base template for new backend projects: Laravel 13 (PHP 8.4), PostgreSQL + Eloquent, Sanctum token auth with email verification/password reset/rate limiting, transactional mail with a console fallback, structured logging, a full example CRUD resource (`notes`), and Docker + CI wired end to end.
