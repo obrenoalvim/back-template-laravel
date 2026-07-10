@@ -61,6 +61,12 @@ Verification and password-reset mail go through Laravel's built-in notifications
 
 `app/Http/Controllers/NotesController.php` + `app/Models/Note.php` (owned by the authenticated user, Form-Request-validated, full CRUD) is the reference implementation to copy for your first real feature — delete it once you don't need the reference (drop the `notes` migration/model/controller/requests, generate a migration to drop the table).
 
+## API documentation
+
+OpenAPI docs are generated from `zircote/swagger-php` attributes (`#[OA\...]`) on controllers, via [L5-Swagger](https://github.com/DarkaOnLine/L5-Swagger). With the app running, open `http://localhost:8000/api/documentation` for the interactive Swagger UI. Use the "Authorize" button with a Sanctum token from `/api/auth/login` to try protected routes (`notes`, `account`, `auth/logout`, `auth/email/resend`).
+
+`L5_SWAGGER_GENERATE_ALWAYS=true` (set in `.env.example`) regenerates the spec on every request in dev; unset or `false` in production and run `php artisan l5-swagger:generate` as a build/deploy step instead.
+
 ## Testing
 
 - **Unit** (`vendor/bin/pest --testsuite=Unit`): no database — e.g. `ApiExceptionRendererTest` instantiates the renderer directly.

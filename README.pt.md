@@ -61,6 +61,12 @@ Email de verificação e reset de senha passam pelas notifications nativas do La
 
 `app/Http/Controllers/NotesController.php` + `app/Models/Note.php` (pertence ao usuário autenticado, validado via Form Request, CRUD completo) é a implementação de referência pra copiar na tua primeira feature de verdade — apaga depois que não precisar mais da referência (remove a migration/model/controller/requests de `notes`, gera uma migration pra dropar a tabela).
 
+## Documentação da API
+
+Docs OpenAPI gerados a partir de atributos `zircote/swagger-php` (`#[OA\...]`) nos controllers, via [L5-Swagger](https://github.com/DarkaOnLine/L5-Swagger). Com o app rodando, abre `http://localhost:8000/api/documentation` pro Swagger UI interativo. Usa o botão "Authorize" com um token Sanctum de `/api/auth/login` pra testar as rotas protegidas (`notes`, `account`, `auth/logout`, `auth/email/resend`).
+
+`L5_SWAGGER_GENERATE_ALWAYS=true` (setado em `.env.example`) regenera o spec a cada request em dev; desliga (`false`) em produção e roda `php artisan l5-swagger:generate` como step de build/deploy.
+
 ## Testes
 
 - **Unit** (`vendor/bin/pest --testsuite=Unit`): sem banco — ex: `ApiExceptionRendererTest` instancia o renderer direto.

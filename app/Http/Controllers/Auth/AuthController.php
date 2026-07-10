@@ -18,9 +18,29 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use OpenApi\Attributes as OA;
 
+#[OA\Tag(name: 'Auth')]
 class AuthController extends Controller
 {
+    #[OA\Post(
+        path: '/api/auth/register',
+        summary: 'Register a new account',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'email', 'password', 'password_confirmation'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'password', type: 'string', minLength: 8),
+                    new OA\Property(property: 'password_confirmation', type: 'string'),
+                ],
+            ),
+        ),
+        responses: [new OA\Response(response: 201, description: 'Account created, token issued')],
+    )]
     public function register(RegisterRequest $request): JsonResponse
     {
         $user = User::create([
@@ -39,6 +59,25 @@ class AuthController extends Controller
         ], 201);
     }
 
+    #[OA\Post(
+        path: '/api/auth/login',
+        summary: 'Log in with email and password',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email', 'password'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'password', type: 'string'),
+                ],
+            ),
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Authenticated, token issued'),
+            new OA\Response(response: 401, description: 'Invalid credentials'),
+        ],
+    )]
     public function login(LoginRequest $request): JsonResponse
     {
         $user = User::where('email', $request->validated('email'))->first();
@@ -55,6 +94,13 @@ class AuthController extends Controller
         ]);
     }
 
+    #[OA\Post(
+        path: '/api/auth/logout',
+        summary: 'Log out (revoke current token)',
+        security: [['bearerAuth' => []]],
+        tags: ['Auth'],
+        responses: [new OA\Response(response: 200, description: 'Logged out')],
+    )]
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
@@ -62,6 +108,19 @@ class AuthController extends Controller
         return response()->json(['message' => 'Logged out.']);
     }
 
+    #[OA\Get(
+        path: '/api/auth/verify-email/{id}/{hash}',
+        summary: 'Verify an email address via signed link',
+        tags: ['Auth'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'hash', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Email verified'),
+            new OA\Response(response: 403, description: 'Invalid verification link'),
+        ],
+    )]
     public function verifyEmail(Request $request, string $id, string $hash): JsonResponse
     {
         $user = User::findOrFail($id);
@@ -80,6 +139,13 @@ class AuthController extends Controller
         return response()->json(['message' => 'Email verified.']);
     }
 
+    #[OA\Post(
+        path: '/api/auth/email/resend',
+        summary: 'Resend the email verification link',
+        security: [['bearerAuth' => []]],
+        tags: ['Auth'],
+        responses: [new OA\Response(response: 200, description: 'Verification link sent (or already verified)')],
+    )]
     public function resendVerification(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -93,6 +159,19 @@ class AuthController extends Controller
         return response()->json(['message' => 'Verification link sent.']);
     }
 
+    #[OA\Post(
+        path: '/api/auth/forgot-password',
+        summary: 'Request a password reset email',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email'],
+                properties: [new OA\Property(property: 'email', type: 'string', format: 'email')],
+            ),
+        ),
+        responses: [new OA\Response(response: 200, description: 'Reset link sent if the email exists')],
+    )]
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
         // Same response whether or not the email exists — no enumeration.
@@ -101,6 +180,27 @@ class AuthController extends Controller
         return response()->json(['message' => 'If that email exists, a reset link has been sent.']);
     }
 
+    #[OA\Post(
+        path: '/api/auth/reset-password',
+        summary: 'Reset password with a token',
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email', 'token', 'password', 'password_confirmation'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'token', type: 'string'),
+                    new OA\Property(property: 'password', type: 'string', minLength: 8),
+                    new OA\Property(property: 'password_confirmation', type: 'string'),
+                ],
+            ),
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Password reset'),
+            new OA\Response(response: 400, description: 'Invalid or expired token'),
+        ],
+    )]
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         $status = Password::reset(
