@@ -53,6 +53,10 @@ See `.env.example` for the full, commented list. `config/env.php` + `app/Provide
 - `POST /api/auth/logout` revokes the current token only; changing your password revokes every *other* token
 - All protected routes use the `auth:sanctum` middleware
 
+## Roles
+
+Every user has a `role` column (`'user'` | `'admin'`, default `'user'`), deliberately absent from `User`'s `#[Fillable(...)]` list so it can never be set via register/update-profile input. `GET /api/admin/users` (admin-only, list of all users) is the reference for protecting a route: the `admin` middleware alias (`app/Http/Middleware/EnsureUserIsAdmin.php`, registered in `bootstrap/app.php`) throws an `AuthorizationException` (403) for non-admins. No self-serve promotion — flip the column directly (`UPDATE users SET role = 'admin' WHERE email = '...'`) for local testing.
+
 ## Email
 
 Verification and password-reset mail go through Laravel's built-in notifications (`VerifyEmail`/`ResetPassword`), reconfigured to link at `FRONTEND_URL` for the reset flow (verification links straight to the API's own signed route). Without SMTP configured (`MAIL_MAILER=log`), mail is written to `storage/logs/laravel.log` instead of requiring real credentials to try the flow locally.

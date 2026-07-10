@@ -53,6 +53,10 @@ Ver `.env.example` pra lista completa e comentada. `config/env.php` + `app/Provi
 - `POST /api/auth/logout` revoga só o token atual; trocar a senha revoga todos os *outros* tokens
 - Todas as rotas protegidas usam o middleware `auth:sanctum`
 
+## Roles
+
+Todo usuário tem uma coluna `role` (`'user'` | `'admin'`, default `'user'`), propositalmente ausente da lista `#[Fillable(...)]` do `User` pra nunca poder ser setada via input de register/update-profile. `GET /api/admin/users` (admin-only, lista todos os usuários) é a referência pra proteger uma rota: o alias de middleware `admin` (`app/Http/Middleware/EnsureUserIsAdmin.php`, registrado em `bootstrap/app.php`) lança uma `AuthorizationException` (403) pra não-admins. Sem promoção self-serve — muda a coluna direto no banco (`UPDATE users SET role = 'admin' WHERE email = '...'`) pra testar localmente.
+
 ## Email
 
 Email de verificação e reset de senha passam pelas notifications nativas do Laravel (`VerifyEmail`/`ResetPassword`), reconfiguradas pra linkar em `FRONTEND_URL` no fluxo de reset (links de verificação vão direto pra rota assinada da própria API). Sem SMTP configurado (`MAIL_MAILER=log`), o email é escrito em `storage/logs/laravel.log` em vez de exigir credenciais reais pra testar o fluxo localmente.

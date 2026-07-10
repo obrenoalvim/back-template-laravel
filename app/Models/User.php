@@ -35,10 +35,31 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
+     * Mirrors the DB column default (`role` defaults to 'user') so a
+     * freshly-created-but-not-yet-refreshed model already reflects it —
+     * Eloquent doesn't pull DB-applied defaults into memory after create().
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'role' => 'user',
+    ];
+
+    /**
      * @return HasMany<Note, $this>
      */
     public function notes(): HasMany
     {
         return $this->hasMany(Note::class);
+    }
+
+    /**
+     * `role` is deliberately absent from the #[Fillable(...)] list above —
+     * it must never be settable via mass assignment (register/update-profile
+     * input). Promote a user by updating the column directly.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
     }
 }

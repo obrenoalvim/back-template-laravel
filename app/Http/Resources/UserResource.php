@@ -23,6 +23,7 @@ class UserResource extends JsonResource
             'name' => $this->resource->name,
             'email' => $this->resource->email,
             'email_verified_at' => $this->resource->email_verified_at?->toIso8601String(),
+            'role' => $this->resource->role,
         ];
     }
 }

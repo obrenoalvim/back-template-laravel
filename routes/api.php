@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AccountController;
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\NotesController;
@@ -37,4 +38,8 @@ Route::prefix('notes')->middleware('auth:sanctum')->group(function () {
     Route::get('/{note}', [NotesController::class, 'show']);
     Route::put('/{note}', [NotesController::class, 'update']);
     Route::delete('/{note}', [NotesController::class, 'destroy']);
+});
+
+Route::prefix('admin')->middleware(['auth:sanctum', 'admin'])->group(function () {
+    Route::get('/users', [AdminController::class, 'users']);
 });
