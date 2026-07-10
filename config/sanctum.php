@@ -84,4 +84,20 @@ return [
         'validate_csrf_token' => ValidateCsrfToken::class,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Access / Refresh Token TTLs (app-specific, not a stock Sanctum key)
+    |--------------------------------------------------------------------------
+    |
+    | AuthController issues two ability-scoped tokens per session instead of
+    | relying on the "expiration" setting above (which applies to every
+    | token uniformly and has no concept of "refresh"): a short-lived
+    | 'access' token for normal requests, and a longer-lived 'refresh' token
+    | that can only hit POST /api/auth/refresh to mint a new pair.
+    |
+    */
+
+    'access_ttl_minutes' => (int) env('SANCTUM_ACCESS_TTL_MINUTES', 60),
+    'refresh_ttl_days' => (int) env('SANCTUM_REFRESH_TTL_DAYS', 30),
+
 ];

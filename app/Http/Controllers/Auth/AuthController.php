@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\LogoutRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Resources\UserResource;
@@ -18,11 +19,34 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
+use Laravel\Sanctum\PersonalAccessToken;
 use OpenApi\Attributes as OA;
 
 #[OA\Tag(name: 'Auth')]
 class AuthController extends Controller
 {
+    /**
+     * @return array{accessToken: string, refreshToken: string}
+     */
+    private function issueTokenPair(User $user): array
+    {
+        $access = $user->createToken(
+            'access',
+            ['access'],
+            now()->addMinutes(config('sanctum.access_ttl_minutes')),
+        );
+        $refresh = $user->createToken(
+            'refresh',
+            ['refresh'],
+            now()->addDays(config('sanctum.refresh_ttl_days')),
+        );
+
+        return [
+            'accessToken' => $access->plainTextToken,
+            'refreshToken' => $refresh->plainTextToken,
+        ];
+    }
+
     #[OA\Post(
         path: '/api/auth/register',
         summary: 'Register a new account',
@@ -39,7 +63,7 @@ class AuthController extends Controller
                 ],
             ),
         ),
-        responses: [new OA\Response(response: 201, description: 'Account created, token issued')],
+        responses: [new OA\Response(response: 201, description: 'Account created, token pair issued')],
     )]
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -51,11 +75,9 @@ class AuthController extends Controller
 
         event(new Registered($user));
 
-        $token = $user->createToken('api')->plainTextToken;
-
         return response()->json([
             'user' => new UserResource($user),
-            'token' => $token,
+            ...$this->issueTokenPair($user),
         ], 201);
     }
 
@@ -74,7 +96,7 @@ class AuthController extends Controller
             ),
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Authenticated, token issued'),
+            new OA\Response(response: 200, description: 'Authenticated, token pair issued'),
             new OA\Response(response: 401, description: 'Invalid credentials'),
         ],
     )]
@@ -86,24 +108,64 @@ class AuthController extends Controller
             abort(401, 'Invalid credentials.');
         }
 
-        $token = $user->createToken('api')->plainTextToken;
-
         return response()->json([
             'user' => new UserResource($user),
-            'token' => $token,
+            ...$this->issueTokenPair($user),
         ]);
     }
 
     #[OA\Post(
-        path: '/api/auth/logout',
-        summary: 'Log out (revoke current token)',
+        path: '/api/auth/refresh',
+        summary: 'Exchange a refresh token for a new token pair',
         security: [['bearerAuth' => []]],
         tags: ['Auth'],
+        responses: [
+            new OA\Response(response: 200, description: 'New token pair issued (old refresh token revoked)'),
+            new OA\Response(response: 403, description: 'Token presented is not a refresh token'),
+        ],
+    )]
+    public function refresh(Request $request): JsonResponse
+    {
+        // The presented Bearer token IS the credential here (auth:sanctum resolves
+        // $request->user() from it) — reject outright if it's an access token, not
+        // the refresh one, so access tokens can't be used to keep minting new pairs.
+        $user = $request->user();
+        if (! $user->tokenCan('refresh')) {
+            abort(403, 'This endpoint requires a refresh token.');
+        }
+
+        $user->currentAccessToken()->delete();
+
+        return response()->json($this->issueTokenPair($user));
+    }
+
+    #[OA\Post(
+        path: '/api/auth/logout',
+        summary: 'Log out (revoke the current token and, if provided, its paired refresh token)',
+        security: [['bearerAuth' => []]],
+        tags: ['Auth'],
+        requestBody: new OA\RequestBody(
+            required: false,
+            content: new OA\JsonContent(
+                properties: [
+                    new OA\Property(
+                        property: 'refresh_token',
+                        type: 'string',
+                        nullable: true,
+                        description: 'Also revoke this refresh token, so logout leaves nothing behind that could still mint new access tokens.',
+                    ),
+                ],
+            ),
+        ),
         responses: [new OA\Response(response: 200, description: 'Logged out')],
     )]
-    public function logout(Request $request): JsonResponse
+    public function logout(LogoutRequest $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
+
+        if ($request->validated('refresh_token')) {
+            PersonalAccessToken::findToken($request->validated('refresh_token'))?->delete();
+        }
 
         return response()->json(['message' => 'Logged out.']);
     }

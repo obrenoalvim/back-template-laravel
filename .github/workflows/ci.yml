@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
 
+      - name: Dependency audit
+        run: composer audit
+
       - name: Format check (Pint)
         run: composer format:check
 

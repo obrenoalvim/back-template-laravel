@@ -1,0 +1,14 @@
+#!/bin/sh
+# Conventional Commits check — no Node/commitlint dependency needed for a PHP repo,
+# just a regex against the same convention the JS templates enforce via commitlint.
+set -e
+
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?: .+'
+message=$(head -n1 "$1")
+
+if ! echo "$message" | grep -qE "$pattern"; then
+    echo "commit-msg: '$message' doesn't follow Conventional Commits."
+    echo "Expected: type(scope?): subject — e.g. 'fix(auth): reject expired refresh tokens'"
+    echo "Types: feat fix docs style refactor perf test build ci chore revert"
+    exit 1
+fi

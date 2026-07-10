@@ -17,12 +17,12 @@ it('registers a user, hashes the password, and returns a usable token', function
 
     $response->assertCreated()
         ->assertJsonPath('user.email', 'ana@example.com')
-        ->assertJsonStructure(['user' => ['id', 'name', 'email'], 'token']);
+        ->assertJsonStructure(['user' => ['id', 'name', 'email'], 'accessToken', 'refreshToken']);
 
     $user = User::where('email', 'ana@example.com')->firstOrFail();
     expect($user->password)->not->toBe('password123');
 
-    $this->withHeader('Authorization', 'Bearer '.$response->json('token'))
+    $this->withHeader('Authorization', 'Bearer '.$response->json('accessToken'))
         ->getJson('/api/account/')
         ->assertOk()
         ->assertJsonPath('user.email', 'ana@example.com');
@@ -55,7 +55,7 @@ it('rejects login with wrong credentials and accepts the right ones', function (
     $this->postJson('/api/auth/login', [
         'email' => 'bob@example.com',
         'password' => 'password123',
-    ])->assertOk()->assertJsonStructure(['user', 'token']);
+    ])->assertOk()->assertJsonStructure(['user', 'accessToken', 'refreshToken']);
 });
 
 it('revokes the token on logout so it can no longer authenticate', function () {
@@ -69,6 +69,46 @@ it('revokes the token on logout so it can no longer authenticate', function () {
     forgetAuthGuards();
     $this->withHeader('Authorization', "Bearer $token")
         ->getJson('/api/account/')
+        ->assertStatus(401);
+});
+
+it('refreshes only with a refresh-scoped token, rotates it, and revokes both on logout', function () {
+    $user = User::factory()->create();
+
+    $login = $this->postJson('/api/auth/login', [
+        'email' => $user->email,
+        'password' => 'password',
+    ])->assertOk();
+    $accessToken = $login->json('accessToken');
+    $refreshToken = $login->json('refreshToken');
+
+    // An access token can't be used to mint new tokens.
+    $this->withHeader('Authorization', "Bearer $accessToken")
+        ->postJson('/api/auth/refresh')
+        ->assertStatus(403);
+
+    forgetAuthGuards();
+    $refreshed = $this->withHeader('Authorization', "Bearer $refreshToken")
+        ->postJson('/api/auth/refresh')
+        ->assertOk()
+        ->assertJsonStructure(['accessToken', 'refreshToken']);
+    $newRefreshToken = $refreshed->json('refreshToken');
+
+    // Rotation: the refresh token just used is now dead.
+    forgetAuthGuards();
+    $this->withHeader('Authorization', "Bearer $refreshToken")
+        ->postJson('/api/auth/refresh')
+        ->assertStatus(401);
+
+    // Logout with both tokens revokes both — neither can refresh afterward.
+    forgetAuthGuards();
+    $this->withHeader('Authorization', "Bearer {$refreshed->json('accessToken')}")
+        ->postJson('/api/auth/logout', ['refresh_token' => $newRefreshToken])
+        ->assertOk();
+
+    forgetAuthGuards();
+    $this->withHeader('Authorization', "Bearer $newRefreshToken")
+        ->postJson('/api/auth/refresh')
         ->assertStatus(401);
 });
 

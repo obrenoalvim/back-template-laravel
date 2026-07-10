@@ -50,8 +50,17 @@ Ver `.env.example` pra lista completa e comentada. `config/env.php` + `app/Provi
 - `GET /api/auth/verify-email/{id}/{hash}` (URL assinada, enviada por email no registro), `POST /api/auth/email/resend`
 - `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`
 - `PUT /api/account/password`, `DELETE /api/account` (ambos exigem Bearer token + senha atual)
-- `POST /api/auth/logout` revoga só o token atual; trocar a senha revoga todos os *outros* tokens
+- `POST /api/auth/refresh`, `POST /api/auth/logout` — ver [Sessões](#sessões) abaixo
+- Trocar a senha revoga todos os *outros* tokens
 - Todas as rotas protegidas usam o middleware `auth:sanctum`
+
+## Sessões
+
+`register`/`login`/`refresh` retornam `{ user?, accessToken, refreshToken }`. Ambos são personal access tokens de verdade do Sanctum (ver `AuthController::issueTokenPair()`) com **abilities** e TTLs diferentes — `access` (`SANCTUM_ACCESS_TTL_MINUTES`, default 60) é o que você manda como `Authorization: Bearer <accessToken>` nas requisições normais; `refresh` (`SANCTUM_REFRESH_TTL_DAYS`, default 30) só consegue autenticar `POST /api/auth/refresh`, checado via `tokenCan('refresh')` — um access token toma 403 se tentar usar ali.
+
+`refresh` **rotaciona**: o refresh token apresentado é apagado no momento que um novo par é emitido, então um token roubado e reusado para de funcionar assim que o cliente legítimo fizer o próximo refresh. `logout` revoga o token atual e, se você mandar `refresh_token` no body, esse também — manda os dois pra não deixar um refresh token vivo pra trás.
+
+Isso é o próprio recurso do Sanctum de tokens ability-scoped com expiração por token (sem sistema JWT paralelo grudado em cima) — ver `hasinhayder/hydra` pro mesmo padrão levado mais longe (roles como abilities também).
 
 ## Roles
 
